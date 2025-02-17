@@ -25,6 +25,14 @@
     .banned-list {
       margin: 10px 0;
     }
+    .footer-note {
+      margin-top: 30px;
+      font-size: 0.9em;
+      color: #666;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+      display: none; /* Hide by default */
+    }
   </style>
 </head>
 <body>
@@ -49,16 +57,17 @@
   <button id="goButton">Generate Pool</button>
   <div id="result"></div>
 
-  <script>
-    // List of possible Marvel heroes
+  <div class="footer-note" id="footerNote">
+    Note: Draft-bot order is based on forsooth's simulations at <a href="https://www.marvelsimulator.com/stats" target="_blank">marvelsimulator.com/stats</a>
+  </div>
 
+  <script>
     // Banned: Spider-Woman
     const bannedHeroes = [
       'Spider-Woman'
     ];
 
     // Bot draft order based on forsooth's simulations
-    // https://www.marvelsimulator.com/stats
     const draftOrder = [
       'Doctor Strange', 'Storm', 'Captain America', 'Cyclops', 'Bishop', 
       'Psylocke', 'Magneto', 'Ironheart', 'Vision', 'Captain Marvel',
@@ -85,7 +94,6 @@
         this.seed = this.hash(seed.toString());
       }
 
-      // Simple hash function to convert string seed to number
       hash(str) {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -96,7 +104,6 @@
         return hash;
       }
 
-      // Generate next random number
       next() {
         this.seed = (1664525 * this.seed + 1013904223) >>> 0;
         return this.seed / 0xFFFFFFFF;
@@ -119,7 +126,7 @@
       
       for (let i = 0; i < numGroups; i++) {
         const group = shuffledArray.slice(i * groupSize, (i + 1) * groupSize);
-        groups.push(group.sort()); // Sort each group alphabetically
+        groups.push(group.sort());
       }
       
       return groups;
@@ -141,7 +148,7 @@
       shuffleArray(heroesPool, rng);
 
       const selectedHeroes = heroesPool.slice(0, numberOfHeroes);
-      const excludedHeroes = heroesPool.slice(numberOfHeroes).sort(); // Get and sort excluded heroes
+      const excludedHeroes = heroesPool.slice(numberOfHeroes).sort();
       const heroGroups = splitIntoGroups(selectedHeroes, 4, rng);
       
       const draftBot = draftOrder.filter(hero => selectedHeroes.includes(hero));
@@ -149,7 +156,6 @@
       const teams = Array.from({ length: numberOfTeams }, (_, i) => `Team ${String.fromCharCode(65 + i)}`);
       shuffleArray(teams, rng);
 
-      // Create the HTML for hero groups
       const groupsHtml = heroGroups.map((group, index) => 
         `<div class="hero-group">
           <strong>Group ${index + 1}:</strong><br>
@@ -162,6 +168,9 @@
         <strong>Draft-bot:</strong><br>${draftBot.join(', ')}<br><br>
         <strong>Draft order:</strong><br>${teams.join('<br>')}<br><br>
         <strong>Excluded Heroes:</strong><br>${excludedHeroes.join(', ')}`;
+      
+      // Make the footnote visible
+      document.getElementById('footerNote').style.display = 'block';
     });
   </script>
 </body>
