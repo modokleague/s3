@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MODOK League S3 Hero Pool Builder</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #heroesList {
+      margin-bottom: 20px;
+    }
+    #result {
+      margin-top: 20px;
+    }
+    .hero-list {
+      margin: 20px 0;
+      line-height: 1.5;
+    }
+    .hero-group {
+      margin: 10px 0;
+    }
+    .banned-list {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>MODOK League Pool Builder, Season 03</h1>
+  
+  <div class="hero-list">
+    <strong>Available Heroes:</strong><br>
+    <div id="allHeroes"></div>
+  </div>
+  <div class="banned-list">
+    <strong>Banned Heroes:</strong><br>
+    <div id="bannedHeroes"></div>
+  </div>
+  <div id="heroesList"></div>
+  <br>
+
+  <label for="teamsInput"><strong>Number of teams:</strong></label>
+  <input type="number" id="teamsInput" min="6" max="12" value="10">
+  <br><br>
+  <label for="seedInput"><strong>Enter seed (optional):</strong></label>
+  <input type="text" id="seedInput">
+  <button id="goButton">Generate Pool</button>
+  <div id="result"></div>
+
+  <script>
+    // List of possible Marvel heroes
+
+    // Banned: Spider-Woman
+    const bannedHeroes = [
+      'Spider-Woman'
+    ];
+
+    // Bot draft order based on forsooth's simulations
+    // https://www.marvelsimulator.com/stats
+    const draftOrder = [
+      'Doctor Strange', 'Storm', 'Captain America', 'Cyclops', 'Bishop', 
+      'Psylocke', 'Magneto', 'Ironheart', 'Vision', 'Captain Marvel',
+      'Wolverine', 'Spider-Man (Miles Morales)', 'Spectrum', 'Black Widow', 'Ant-Man',
+      'Phoenix', 'Venom', 'Gamora', 'Spider-Ham', 'Angel', 
+      'Iron Man', 'SP//dr', 'Rogue', 'Nebula', 'X-23', 
+      'Gambit', 'Scarlet Witch', 'Colossus', 'Black Panther', 'Adam Warlock',
+      'Domino', 'Quicksilver', 'Nightcrawler', 'Spider-Man (Peter Parker)',
+      'Iceman', 'Ms Marvel', 'Jubilee', 'Nova', 'Rocket', 
+      'Cable', 'Hawkeye', 'Ghost Spider', 'Wasp', 'Shadowcat', 
+      'War Machine', 'Magik', 'Star-Lord', 'Drax', 'She-Hulk', 
+      'Groot', 'Thor', 'Deadpool', 'Hulk', 'Valkyrie'
+    ];
+
+    // - Alphabetical of the draft order list
+    const marvelHeroes = [...draftOrder].sort();
+
+    // Display all heroes and banned heroes on page load
+    document.getElementById('allHeroes').innerHTML = marvelHeroes.join(', ');
+    document.getElementById('bannedHeroes').innerHTML = bannedHeroes.join(', ');
+
+    class Random {
+      constructor(seed = Math.random()) {
+        this.seed = this.hash(seed.toString());
+      }
+
+      // Simple hash function to convert string seed to number
+      hash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        return hash;
+      }
+
+      // Generate next random number
+      next() {
+        this.seed = (1664525 * this.seed + 1013904223) >>> 0;
+        return this.seed / 0xFFFFFFFF;
+      }
+    }
+
+    function shuffleArray(array, rng) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(rng.next() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function splitIntoGroups(array, numGroups, rng) {
+      const shuffledArray = [...array];
+      shuffleArray(shuffledArray, rng);
+      
+      const groupSize = Math.floor(array.length / numGroups);
+      const groups = [];
+      
+      for (let i = 0; i < numGroups; i++) {
+        const group = shuffledArray.slice(i * groupSize, (i + 1) * groupSize);
+        groups.push(group.sort()); // Sort each group alphabetically
+      }
+      
+      return groups;
+    }
+
+    document.getElementById('goButton').addEventListener('click', function() {
+      const seedInput = document.getElementById('seedInput').value;
+      const rng = new Random(seedInput || Math.random());
+      
+      const numberOfTeams = parseInt(document.getElementById('teamsInput').value);
+      const numberOfHeroes = 4 * (numberOfTeams + 1);
+
+      if (numberOfHeroes > marvelHeroes.length) {
+        document.getElementById('result').innerText = 'Not enough heroes available for the given number of teams.';
+        return;
+      }
+
+      const heroesPool = [...marvelHeroes];
+      shuffleArray(heroesPool, rng);
+
+      const selectedHeroes = heroesPool.slice(0, numberOfHeroes);
+      const excludedHeroes = heroesPool.slice(numberOfHeroes).sort(); // Get and sort excluded heroes
+      const heroGroups = splitIntoGroups(selectedHeroes, 4, rng);
+      
+      const draftBot = draftOrder.filter(hero => selectedHeroes.includes(hero));
+
+      const teams = Array.from({ length: numberOfTeams }, (_, i) => `Team ${String.fromCharCode(65 + i)}`);
+      shuffleArray(teams, rng);
+
+      // Create the HTML for hero groups
+      const groupsHtml = heroGroups.map((group, index) => 
+        `<div class="hero-group">
+          <strong>Group ${index + 1}:</strong><br>
+          ${group.join(', ')}
+        </div>`
+      ).join('');
+
+      document.getElementById('result').innerHTML = 
+        `${groupsHtml}<br>
+        <strong>Draft-bot:</strong><br>${draftBot.join(', ')}<br><br>
+        <strong>Draft order:</strong><br>${teams.join('<br>')}<br><br>
+        <strong>Excluded Heroes:</strong><br>${excludedHeroes.join(', ')}`;
+    });
+  </script>
+</body>
+</html>
